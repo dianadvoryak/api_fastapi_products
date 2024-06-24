@@ -1,9 +1,9 @@
 version: '3.9'
 
 services:
-  database:
+  postgres_as:
     image: postgres:15-alpine
-    container_name: postgres
+    container_name: postgres_as
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345

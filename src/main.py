@@ -1,4 +1,4 @@
-from src.shift_assignment.router import router as router_shift_assignment
+from shift_assignment.router import router as router_shift_assignment
 
 from fastapi import FastAPI
 
