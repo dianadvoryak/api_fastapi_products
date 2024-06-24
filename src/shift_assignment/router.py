@@ -4,7 +4,7 @@ from database import get_async_session
 from fastapi import APIRouter, Depends, HTTPException
 from shift_assignment.models import shift_assignment_model
 from shift_assignment.schemas import Create_Shift_Assignment, Response_Shift_Assignment
-from sqlalchemy import insert, select, update
+from sqlalchemy import insert, select, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -14,11 +14,20 @@ router = APIRouter(
 )
 
 
-# todo: Важно: пара НомерПартии и ДатаПартии всегда уникальна! Если уже существует какая-то партия с аналогичным номером партии и датой партии, мы должны ее перезаписать.
 @router.post("/create")
 async def create_shift_assignment(request_shift_assignment: Create_Shift_Assignment,
                                   session: AsyncSession = Depends(get_async_session)):
     try:
+        query_id = select(shift_assignment_model).where(
+            or_(
+                shift_assignment_model.c.NomerPartii == request_shift_assignment.NomerPartii,
+                str(shift_assignment_model.c.DataPartii) == str(request_shift_assignment.DataPartii)
+            ))
+        id_shift_assignment = await session.execute(query_id)
+        if id_shift_assignment:
+            await update_shift_assignment(id_shift_assignment.mappings().first()["id"], request_shift_assignment, session)
+            return
+
         status_zakrytiya = None
         if request_shift_assignment.StatusZakrytiya:
             status_zakrytiya = datetime.now()
