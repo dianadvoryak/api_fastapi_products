@@ -54,7 +54,7 @@ async def create_specific_operations(request_shift_assignment: Create_Shift_Assi
             "details": None
         })
 
-@router.get("/{id}")
+@router.get("/get/{id}")
 async def get_specific_operations(id: int, session: AsyncSession = Depends(get_async_session)):
     try:
         query = select(shift_assignment_model).where(shift_assignment_model.c.id == id)
@@ -71,15 +71,41 @@ async def get_specific_operations(id: int, session: AsyncSession = Depends(get_a
             "details": None
         })
 
-#
-# @router.post("")
-# async def add_specific_operations(new_operation: OperationCreate, session: AsyncSession = Depends(get_async_session)):
-#     stmt = insert(operation).values(**new_operation.model_dump())
-#     await session.execute(stmt)
-#     await session.commit()
-#     return {"status": "success"}
-#
-# @router.get("/main")
-# async def main(session: AsyncSession = Depends(get_async_session)):
-#     result = await session.execute(select(1))
-#     return result.mappings().all()
+
+@router.patch("/update/{id}", response_model=Response_Shift_Assignment)
+async def update_specific_operations(id: int, response: Response_Shift_Assignment,session: AsyncSession = Depends(get_async_session)):
+    try:
+        status_zakrytiya = None
+        if response.StatusZakrytiya:
+            status_zakrytiya = datetime.now()
+        query = (
+            insert(shift_assignment_model).
+            values(
+                StatusZakrytiya=response.StatusZakrytiya,
+                closed_at=status_zakrytiya,
+                PredstavlenieZadaniyaNaSmenu=response.PredstavlenieZadaniyaNaSmenu,
+                Liniya=response.Liniya,
+                Smena=response.Smena,
+                Brigada=response.Brigada,
+                NomerPartii=response.NomerPartii,
+                DataPartii=response.DataPartii,
+                Nomenklatura=response.Nomenklatura,
+                KodEKN=response.KodEKN,
+                IdentifikatorRC=response.IdentifikatorRC,
+                DataVremyaNachalaSmeny=datetime.now()
+            )
+        )
+        query = select(shift_assignment_model).where(shift_assignment_model.c.id == id)
+        result = await session.execute(query)
+        return {
+            "status": "success",
+            "data": result.mappings().all(),
+            "details": None
+        }
+    except Exception:
+        raise HTTPException(status_code=404, detail={
+            "status": "not found",
+            "data": None,
+            "details": None
+        })
+

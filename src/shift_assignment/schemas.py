@@ -19,7 +19,6 @@ class Create_Shift_Assignment(BaseModel):
 class Response_Shift_Assignment(BaseModel):
     id: int
     StatusZakrytiya: bool = Field(alias='СтатусЗакрытия')
-    closed_at: datetime = Field(alias='ВремяЗакрытия')
     PredstavlenieZadaniyaNaSmenu: str = Field(alias='ПредставлениеЗаданияНаСмену')
     Liniya: str = Field(alias='Линия')
     Smena: str = Field(alias='Смена')
