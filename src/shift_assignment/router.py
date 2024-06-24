@@ -4,7 +4,7 @@ from database import get_async_session
 from fastapi import APIRouter, Depends, HTTPException
 from shift_assignment.models import shift_assignment_model
 from shift_assignment.schemas import Create_Shift_Assignment, Response_Shift_Assignment
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -16,7 +16,7 @@ router = APIRouter(
 
 # todo: Важно: пара НомерПартии и ДатаПартии всегда уникальна! Если уже существует какая-то партия с аналогичным номером партии и датой партии, мы должны ее перезаписать.
 @router.post("/create")
-async def create_specific_operations(request_shift_assignment: Create_Shift_Assignment,
+async def create_shift_assignment(request_shift_assignment: Create_Shift_Assignment,
                                   session: AsyncSession = Depends(get_async_session)):
     try:
         status_zakrytiya = None
@@ -55,7 +55,7 @@ async def create_specific_operations(request_shift_assignment: Create_Shift_Assi
         })
 
 @router.get("/get/{id}")
-async def get_specific_operations(id: int, session: AsyncSession = Depends(get_async_session)):
+async def get_shift_assignment(id: int, session: AsyncSession = Depends(get_async_session)):
     try:
         query = select(shift_assignment_model).where(shift_assignment_model.c.id == id)
         result = await session.execute(query)
@@ -72,34 +72,44 @@ async def get_specific_operations(id: int, session: AsyncSession = Depends(get_a
         })
 
 
-@router.patch("/update/{id}", response_model=Response_Shift_Assignment)
-async def update_specific_operations(id: int, response: Response_Shift_Assignment,session: AsyncSession = Depends(get_async_session)):
+@router.patch("/update/{id}")
+async def update_shift_assignment(id: int, request: Response_Shift_Assignment, session: AsyncSession = Depends(get_async_session)):
     try:
+        query_id = select(shift_assignment_model).where(shift_assignment_model.c.id == id)
+        id_shift_assignment = await session.execute(query_id)
+
+        if not id_shift_assignment:
+            return {
+                    "status": "success",
+                    "data": id_shift_assignment.mappings().all(),
+                    "details": None
+                }
+
         status_zakrytiya = None
-        if response.StatusZakrytiya:
+        if request.StatusZakrytiya:
             status_zakrytiya = datetime.now()
-        query = (
-            insert(shift_assignment_model).
-            values(
-                StatusZakrytiya=response.StatusZakrytiya,
-                closed_at=status_zakrytiya,
-                PredstavlenieZadaniyaNaSmenu=response.PredstavlenieZadaniyaNaSmenu,
-                Liniya=response.Liniya,
-                Smena=response.Smena,
-                Brigada=response.Brigada,
-                NomerPartii=response.NomerPartii,
-                DataPartii=response.DataPartii,
-                Nomenklatura=response.Nomenklatura,
-                KodEKN=response.KodEKN,
-                IdentifikatorRC=response.IdentifikatorRC,
-                DataVremyaNachalaSmeny=datetime.now()
-            )
-        )
-        query = select(shift_assignment_model).where(shift_assignment_model.c.id == id)
-        result = await session.execute(query)
+        query_update = update(shift_assignment_model).where(shift_assignment_model.c.id == id).values(
+                            StatusZakrytiya=request.StatusZakrytiya,
+                            closed_at=status_zakrytiya,
+                            PredstavlenieZadaniyaNaSmenu=request.PredstavlenieZadaniyaNaSmenu,
+                            Liniya=request.Liniya,
+                            Smena=request.Smena,
+                            Brigada=request.Brigada,
+                            NomerPartii=request.NomerPartii,
+                            DataPartii=request.DataPartii,
+                            Nomenklatura=request.Nomenklatura,
+                            KodEKN=request.KodEKN,
+                            IdentifikatorRC=request.IdentifikatorRC,
+                            DataVremyaNachalaSmeny=request.DataVremyaNachalaSmeny,
+                            DataVremyaOkonchaniyaSmeny=request.DataVremyaOkonchaniyaSmeny,
+                        )
+
+        shift_assignment = await session.execute(query_update)
+        await session.commit()
+
         return {
             "status": "success",
-            "data": result.mappings().all(),
+            "data": shift_assignment.mappings().all(),
             "details": None
         }
     except Exception:
