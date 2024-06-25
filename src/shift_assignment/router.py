@@ -3,8 +3,8 @@ from datetime import datetime
 from database import get_async_session
 from fastapi import APIRouter, Depends, HTTPException
 from shift_assignment.models import shift_assignment_model
-from shift_assignment.schemas import Create_Shift_Assignment, Response_Shift_Assignment
-from sqlalchemy import insert, select, update, or_
+from shift_assignment.schemas import Create_Shift_Assignment, Response_Shift_Assignment, Filter_Shift_Assignment
+from sqlalchemy import insert, select, update, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -25,8 +25,8 @@ async def create_shift_assignment(request_shift_assignment: Create_Shift_Assignm
             ))
         id_shift_assignment = await session.execute(query_id)
         if id_shift_assignment:
-            await update_shift_assignment(id_shift_assignment.mappings().first()["id"], request_shift_assignment, session)
-            return
+            update = await update_shift_assignment(id_shift_assignment.mappings().first()["id"], request_shift_assignment, session)
+            return update
 
         status_zakrytiya = None
         if request_shift_assignment.StatusZakrytiya:
@@ -119,6 +119,58 @@ async def update_shift_assignment(id: int, request: Response_Shift_Assignment, s
         return {
             "status": "success",
             "data": shift_assignment.mappings().all(),
+            "details": None
+        }
+    except Exception:
+        raise HTTPException(status_code=404, detail={
+            "status": "not found",
+            "data": None,
+            "details": None
+        })
+
+@router.post("/create")
+async def create_shift_assignment(filter: Filter_Shift_Assignment, offset, limit,
+                                  session: AsyncSession = Depends(get_async_session)):
+    try:
+        query = select(shift_assignment_model)
+
+        add_filters = []
+        if filter.StatusZakrytiya:
+            add_filters.append(shift_assignment_model.StatusZakrytiya == filter.StatusZakrytiya)
+        if filter.PredstavlenieZadaniyaNaSmenu:
+            add_filters.append(shift_assignment_model.batch_number == filter.PredstavlenieZadaniyaNaSmenu)
+        if filter.Liniya:
+            add_filters.append(shift_assignment_model.batch_date == filter.batch_date)
+        if filter.Smena:
+            add_filters.append(shift_assignment_model.Smena == filter.Smena)
+        if filter.Brigada:
+            add_filters.append(shift_assignment_model.Brigada == filter.Brigada)
+        if filter.NomerPartii:
+            add_filters.append(shift_assignment_model.NomerPartii == filter.NomerPartii)
+        if filter.DataPartii:
+            add_filters.append(shift_assignment_model.DataPartii == filter.DataPartii)
+        if filter.Nomenklatura:
+            add_filters.append(shift_assignment_model.Nomenklatura == filter.Nomenklatura)
+        if filter.KodEKN:
+            add_filters.append(shift_assignment_model.KodEKN == filter.KodEKN)
+        if filter.IdentifikatorRC:
+            add_filters.append(shift_assignment_model.IdentifikatorRC == filter.IdentifikatorRC)
+        if filter.DataVremyaNachalaSmeny:
+            add_filters.append(shift_assignment_model.DataVremyaNachalaSmeny == filter.DataVremyaNachalaSmeny)
+        if filter.DataVremyaOkonchaniyaSmeny:
+            add_filters.append(shift_assignment_model.DataVremyaOkonchaniyaSmeny == filter.DataVremyaOkonchaniyaSmeny)
+
+
+        if add_filters:
+            query = query.where(and_(*add_filters))
+
+        query = query.offset(offset).limit(limit)
+        filter_query = await session.execute(query)
+        await session.commit()
+
+        return {
+            "status": "success",
+            "data": filter_query.mappings().all(),
             "details": None
         }
     except Exception:
