@@ -13,6 +13,7 @@ sys.path.append(os.path.join(sys.path[0], 'src'))
 from config import DB_HOST, DB_PORT, DB_USER, DB_NAME, DB_PASS
 from database import metadata, Base
 from shift_assignment.models import *
+from products.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
