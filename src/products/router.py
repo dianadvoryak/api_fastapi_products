@@ -53,3 +53,37 @@ async def create_shift_assignment(request_products: Create_Shift_Assignment,
             "details": None
         })
 
+
+
+
+
+@router.get("/get/{id}")
+async def set_aggregation(consignment: int, products: int, session: AsyncSession = Depends(get_async_session)):
+    try:
+        query_exist = select(products_model).where(products_model.c.id == consignment)
+        if not query_exist:
+            raise HTTPException(status_code=500, detail={
+                "status": "error",
+                "data": None,
+                "details": None
+            })
+        if query_exist.mappings().first()["NomerPartii"] is None:
+            query = select(products_model).where(products_model.c.id == consignment)
+            query_update = update(products_model).where(shift_assignment_model.c.id == id).values(
+                is_aggregated=True,
+                aggregated_at=datetime.now(),
+            )
+            await session.execute(query_update)
+            await session.commit()
+        return {
+            "status": "success",
+            "data": '',
+            "details": None
+        }
+    except Exception:
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": None
+        })
+
